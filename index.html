@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birganj Govt. College | Portal & Management</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root { 
+            --primary: #1abc9c; 
+            --primary-hover: #16a085;
+            --primary-glow: rgba(26, 188, 156, 0.25);
+            --secondary: #0f172a; 
+            --bg: #f4f7f6; /* Gentle, bright mint-grey background base */
+            --white: #ffffff; 
+            --danger: #ef4444; 
+            --success: #10b981; 
+            --warning: #f59e0b; 
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Light Elegant Background with Traditional Bengali Alpona Pattern */
+        body { 
+            display: flex; 
+            height: 100vh; 
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(26, 188, 156, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(148, 163, 184, 0.15) 0px, transparent 50%),
+                /* Subtle Alpona SVG Tiled Pattern adjusted for Light backgrounds */
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%231abc9c' fill-opacity='0.035'%3E%3Cpath d='M80 0 C60 40 40 60 0 80 C40 100 60 120 80 160 C100 120 120 100 160 80 C120 60 100 40 80 0 Z M80 25 C90 55 105 70 135 80 C105 90 90 105 80 135 C70 105 55 90 25 80 C55 70 70 55 80 25 Z'/%3E%3Ccircle cx='80' cy='80' r='12'/%3E%3Ccircle cx='80' cy='80' r='6' fill='none' stroke='%231abc9c' stroke-width='1.5' stroke-opacity='0.03'/%3E%3Cpath d='M40 40 C50 60 60 50 80 80 C60 110 50 100 40 120' fill='none' stroke='%231abc9c' stroke-width='1' stroke-opacity='0.02'/%3E%3Cpath d='M120 40 C110 60 100 50 80 80 C100 110 110 100 120 120' fill='none' stroke='%231abc9c' stroke-width='1' stroke-opacity='0.02'/%3E%3C/g%3E%3C/svg%3E");
+            background-attachment: fixed;
+            color: #1e293b;
+            overflow: hidden; 
+        }
+
+        /* Modern Sidebar Styling */
+        .sidebar { 
+            width: 270px; 
+            background: var(--secondary); 
+            color: #f1f5f9; 
+            padding: 30px 20px; 
+            flex-shrink: 0; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            box-shadow: 4px 0 25px rgba(15, 23, 42, 0.12);
+            z-index: 10;
+        }
+        .sidebar h2 { 
+            text-align: center; 
+            color: var(--primary); 
+            font-size: 17px; 
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #1e293b; 
+            padding-bottom: 15px; 
+        }
+        .sidebar-menu-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        .menu-btn { 
+            width: 100%; 
+            background: none; 
+            border: none; 
+            color: #94a3b8; 
+            padding: 13px 16px; 
+            text-align: left; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            margin-bottom: 8px; 
+            font-size: 14px; 
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .menu-btn:hover { 
+            background: rgba(255, 255, 255, 0.05); 
+            color: #f1f5f9; 
+        }
+        .menu-btn.active { 
+            background: var(--primary); 
+            color: var(--secondary); 
+            font-weight: bold; 
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+        .admin-only { display: none; }
+
+        /* Main Content Container */
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; position: relative; }
+        
+        /* Glassmorphism style sections on top of light background */
+        .section { 
+            display: none; 
+            background: rgba(255, 255, 255, 0.96); 
+            padding: 35px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05); 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        .section.active { display: block; animation: fadeIn 0.4s; }
+
+        /* Modern Portal Grid CSS */
+        .portal-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 25px; 
+            margin-top: 30px; 
+        }
+        
+        /* Premium Modern Cards */
+        .portal-card { 
+            background: var(--white); 
+            border: 1px solid rgba(26, 188, 156, 0.12); 
+            border-radius: 16px; 
+            padding: 35px 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02); 
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, var(--primary), #3498db);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .portal-card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 16px 30px rgba(26, 188, 156, 0.14), 0 5px 15px rgba(0, 0, 0, 0.02); 
+            border-color: var(--primary); 
+        }
+        .portal-card:hover::before {
+            opacity: 1;
+        }
+        .portal-card .icon { 
+            font-size: 46px; 
+            margin-bottom: 16px; 
+            display: inline-block; 
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .portal-card:hover .icon {
+            transform: scale(1.2) rotate(6deg);
+        }
+        .portal-card h4 { 
+            font-size: 16px; 
+            color: var(--secondary); 
+            margin-bottom: 10px; 
+            font-weight: 700;
+        }
+        .portal-card p { 
+            font-size: 13px; 
+            color: #64748b; 
+            line-height: 1.5;
+        }
+
+        /* Custom Popup */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: none; justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(5px); }
+        .modal-box { background: white; padding: 35px 30px; border-radius: 16px; width: 90%; max-width: 420px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border-top: 6px solid var(--primary); }
+        .modal-box.warning { border-top-color: var(--warning); }
+        .modal-box.error { border-top-color: var(--danger); }
+        .modal-box.success { border-top-color: var(--success); }
+        #popTitle { font-size: 18px; font-weight: 700; color: #1e293b; margin-top: 5px; }
+        #popMsg { font-size: 14px; line-height: 1.5; color: #64748b; margin-top: 10px; }
+        .modal-btn-group { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+        .modal-btn { padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
+        .btn-ok { background: var(--primary); color: white; }
+        .btn-cancel { background: #f1f5f9; color: #475569; }
+        .btn-select-option { background: var(--secondary); color: white; width: 100%; margin-top: 5px; text-align: left; padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; }
+        .btn-select-option:hover { background: var(--primary); }
+
+        /* Forms */
+        .settings-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+        label { display: block; margin-top: 10px; font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select { 
+            width: 100%; 
+            padding: 11px 14px; 
+            margin-top: 6px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 8px; 
+            outline: none; 
+            font-size: 14px; 
+            transition: all 0.3s ease;
+            background: var(--white);
+            color: #334155;
+        }
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .flex-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .flex-col { flex: 1; min-width: 180px; }
+        .action-btn { 
+            width: 100%; 
+            padding: 13px; 
+            background: var(--primary); 
+            color: var(--secondary); 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            font-weight: 700; 
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .action-btn:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+        
+        /* Floating premium top-right toast style restored */
+        #saveNotice { 
+            position: fixed; 
+            top: 25px; 
+            right: 25px; 
+            background: #27ae60; 
+            color: white; 
+            padding: 16px 26px; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+            z-index: 100001; 
+            display: none; 
+            text-align: left; 
+            font-size: 13.5px; 
+            font-weight: bold; 
+            border-left: 5px solid #1e7e34;
+            animation: slideIn 0.4s forwards;
+        }
+
+        .table-res { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table-res th, .table-res td { border: 1px solid #edf2f7; padding: 12px; text-align: center; font-size: 13px; }
+        .table-container { width: 100%; overflow-x: auto; margin-top: 15px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; margin-bottom: 25px; }
+        .stats-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; }
+        .stats-card h4 { font-size: 13px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; font-weight: 700; }
+        .stats-card .value { font-size: 26px; font-weight: bold; color: #1e293b; }
+
+        .mobile-back-btn { display: none; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Mobile Responsive Navigation & Grid */
+        @media (max-width: 768px) {
+            body { 
+                flex-direction: column; 
+                overflow-y: auto; 
+                height: auto; 
+                min-height: 100vh;
+            }
+            
+            /* Sidebar becomes top compact native-looking navigation bar */
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                padding: 16px 15px; 
+                box-shadow: 0 4px 15px rgba(15, 23, 42, 0.08); 
+                display: flex; 
+                flex-direction: column; 
+                gap: 12px; 
+                background: #0f172a; 
+                position: sticky; 
+                top: 0; 
+                z-index: 999;
+            }
+            .sidebar h2 { 
+                margin-bottom: 0px; 
+                font-size: 15px; 
+                border-bottom: none; 
+                padding-bottom: 0; 
+                text-align: left; 
+            }
+            
+            /* Menu Buttons Scroll Horizontally on Mobile Screens */
+            .sidebar-menu-wrapper { 
+                display: flex; 
+                overflow-x: auto; 
+                scroll-behavior: smooth; 
+                width: 100%; 
+                gap: 8px; 
+                padding-bottom: 4px;
+            }
+            .sidebar-menu-wrapper::-webkit-scrollbar { 
+                display: none; 
+            }
+            .menu-btn { 
+                width: max-content !important; 
+                flex-shrink: 0; 
+                margin-bottom: 0; 
+                padding: 8px 14px; 
+                font-size: 13px; 
+            }
+            #auth-nav-btn {
+                margin-top: 0 !important;
+            }
+
+            .main-content { 
+                padding: 15px; 
+                overflow-y: visible; 
+                padding-bottom: 80px;
+            }
+            
+            /* Extra bottom padding to prevent mobile virtual keyboard from overlaying form elements */
+            .section { 
+                padding: 20px 15px; 
+                border-radius: 12px; 
+                padding-bottom: 140px !important;
+            }
+            .flex-col { min-width: 100%; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+            /* Full Screen View optimization when active on mobile */
+            body.full-screen-active .sidebar {
+                display: none !important;
+            }
+            body.full-screen-active .main-content {
+                padding: 5px !important;
+            }
+            body.full-screen-active .section {
+                padding: 15px 12px !important;
+                margin: 0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+            }
+            body.full-screen-active .mobile-back-btn {
+                display: block !important;
+                width: 100%;
+            }
+        }
+
+        /* Compact Portal Grid on Small Smartphones */
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            
+            /* Modern 2-column smaller card design for mobile screen space optimization */
+            .portal-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+                padding: 0 5px !important;
+            }
+            .portal-card {
+                padding: 16px 12px !important;
+                border-radius: 12px !important;
+            }
+            .portal-card .icon {
+                font-size: 32px !important;
+                margin-bottom: 8px !important;
+            }
+            .portal-card h4 {
+                font-size: 12.5px !important;
+                font-weight: 700 !important;
+                line-height: 1.25 !important;
+                margin-bottom: 4px !important;
+            }
+            /* Hide the details paragraph on mobile view to make the design compact and dashboard-like */
+            .portal-card p {
+                display: none !important;
+            }
+
+            #saveNotice {
+                top: 15px;
+                right: 15px;
+                left: 15px;
+                width: calc(100% - 30px);
+                animation: fadeIn 0.3s forwards;
+            }
+        }
+    </style>
+</head>
+<body onload="init()">
+
+    <div class="modal-overlay" id="customPopup">
+        <div class="modal-box">
+            <h3 id="popTitle">Notification</h3>
+            <p id="popMsg" style="margin-top: 10px; color: #666;"></p>
+            <div class="modal-btn-group" id="popBtns"></div>
+        </div>
+    </div>
+
+    <!-- Floating Toast notice container -->
+    <div id="saveNotice"></div>
+
+    <div class="sidebar">
+        <h2>BIRGANJ GOVT. COLLEGE</h2>
+        <div class="sidebar-menu-wrapper">
+            <button class="menu-btn active" id="btn-home" onclick="showTab('home-tab', this)">Home Portal</button>
+            <button class="menu-btn" id="btn-search" onclick="showTab('search-tab', this)">Search Result</button>
+            
+            <!-- Protected tabs -->
+            <button class="menu-btn admin-only" id="btn-database" onclick="showTab('database-tab', this)">Student Database</button>
+            <button class="menu-btn admin-only" id="btn-entry" onclick="showTab('entry-tab', this)">Add Marks</button>
+            <button class="menu-btn admin-only" id="btn-analysis" onclick="showTab('analysis-tab', this); syncAnalysisInputs()">Result Analysis</button>
+            <button class="menu-btn admin-only" id="btn-merit" onclick="showTab('merit-tab', this); syncMeritInputs()">Merit List</button>
+            
+            <button class="menu-btn" id="auth-nav-btn" onclick="showTab('login-tab', this)">Admin Login</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Home Tab -->
+        <div id="home-tab" class="section active">
+            <h2 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 10px;">College Application Portal</h2>
+            <p style="color: #64748b; font-size: 14px;">Select an educational tool or portal from below to proceed.</p>
+            
+            <div class="portal-grid">
+                <div class="portal-card" onclick="showTab('search-tab', document.getElementById('btn-search'))">
+                    <span class="icon">🔍</span>
+                    <h4>Result Verification</h4>
+                    <p>Search & print academic transcripts of students.</p>
+                </div>
+                <div class="portal-card" onclick="showPop('Notice', 'Admission portal is currently offline for maintenance.', 'info')">
+                    <span class="icon">🎓</span>
+                    <h4>Online Admission</h4>
+                    <p>Apply online for the new academic session.</p>
+                </div>
+                <div class="portal-card" onclick="showPop('Notice', 'Notice board integration coming soon.', 'info')">
+                    <span class="icon">📌</span>
+                    <h4>Notice Board</h4>
+                    <p>Read latest academic orders & schedules.</p>
+                </div>
+                <div class="portal-card" onclick="showTab('login-tab', document.getElementById('auth-nav-btn'))">
+                    <span class="icon">🔐</span>
+                    <h4>Teacher Panel</h4>
+                    <p>Sign in to configure marks & transcripts.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Result -->
+        <div id="search-tab" class="section">
+            <h3 style="margin-bottom: 20px;">Search Results Portal</h3>
+            <div class="settings-box">
+                <div class="flex-row">
+                    <div class="flex-col">
+                        <label>Exam Name</label>
+                        <select id="srExam">
+                            <option value="">-- Select Exam --</option>
+                            <option>First Term Exam</option>
+                            <option>Promotion Test Exam</option>
+                            <option>Test Exam</option>
+                        </select>
+                    </div>
+                    <div class="flex-col"><label>Exam Year</label><input type="number" id="srYear"></div>
+                    <div class="flex-col"><label>Group</label><select id="srGroup"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                    <div class="flex-col"><label>Roll Number</label><input type="number" id="srRoll"></div>
+                </div>
+            </div>
+            <button class="action-btn" style="background:var(--secondary); color:white;" onclick="redirectToResult()">Show Marksheet</button>
+        </div>
+
+        <!-- Admin Login Section -->
+        <div id="login-tab" class="section">
+            <h3 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 20px;" id="loginHeader">Admin Login</h3>
+            <div class="settings-box" id="loginFormContainer" style="max-width: 500px; margin: 0 auto;">
+                <label>Email Address</label>
+                <input type="email" id="loginEmail" placeholder="admin@college.com">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+                <button class="action-btn" onclick="handleAuth()">Login</button>
+            </div>
+            <div id="logoutContainer" style="display: none; text-align: center; max-width: 500px; margin: 0 auto;">
+                <p style="margin-bottom: 20px; font-weight: bold; color: var(--secondary);">You are currently logged in as administrator.</p>
+                <button class="action-btn" style="background: var(--danger); color: white;" onclick="handleLogout()">Sign Out</button>
+            </div>
+        </div>
+
+        <!-- Student Database Section (Protected) - Lightened & Optimized -->
+        <div id="database-tab" class="section">
+            <!-- Mobile Back Button (No Bengali Text) -->
+            <button class="mobile-back-btn action-btn" style="background: #34495e; color: white; margin-bottom: 20px; margin-top: 0; padding: 12px; font-size: 13.5px;" onclick="goBackToMenu()">
+                ⬅️ Back to Dashboard Menu
+            </button>
+
+            <h3 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 20px;">Student Registration Directory</h3>
+            <div class="settings-box">
+                <h4>Register New Student Profile</h4>
+                <div class="flex-row">
+                    <div class="flex-col"><label>Student Name</label><input type="text" id="db_name" placeholder="Full Name" onkeydown="dbEnterKey(event)"></div>
+                    <div class="flex-col"><label>Group</label><select id="db_group" onkeydown="dbEnterKey(event)"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                    <div class="flex-col"><label>Roll Number</label><input type="number" id="db_roll" placeholder="Roll" onkeydown="dbEnterKey(event)"></div>
+                    <div class="flex-col"><label>Mobile Number</label><input type="text" id="db_mobile" placeholder="017XXXXXXXX" onkeydown="dbEnterKey(event)"></div>
+                    <div class="flex-col"><label>Session (e.g. 2024-2025)</label><input type="text" id="db_session" placeholder="2024-2025" oninput="saveDbSession()" onkeydown="dbEnterKey(event)"></div>
+                </div>
+                <button class="action-btn" onclick="saveProfile()">Save Student Profile (Enter)</button>
+            </div>
+
+            <!-- Highly optimized Search & Delete component instead of rendering thousands of rows -->
+            <div class="settings-box" style="margin-top: 15px;">
+                <h4>Search & Remove Student Profiles</h4>
+                <div class="flex-row">
+                    <div class="flex-col"><label>Group</label><select id="find_group"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                    <div class="flex-col"><label>Roll Number</label><input type="number" id="find_roll" placeholder="Roll to Search" onkeydown="if(event.key==='Enter') searchProfile()"></div>
+                </div>
+                <button class="action-btn" style="background:var(--secondary); color:white; max-width:200px; margin-top:15px;" onclick="searchProfile()">Search Student</button>
+                
+                <div id="searchResults" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- Entry Section (Protected) -->
+        <div id="entry-tab" class="section">
+            <!-- Mobile Back Button -->
+            <button class="mobile-back-btn action-btn" style="background: #34495e; color: white; margin-bottom: 20px; margin-top: 0; padding: 12px; font-size: 13.5px;" onclick="goBackToMenu()">
+                ⬅️ মেইন মেনুতে ফিরে যান (Back to Menu)
+            </button>
+
+            <div class="settings-box">
+                <div class="flex-row">
+                    <div class="flex-col"><label>Exam Name</label>
+                        <select id="exam_name" onchange="saveH(); preloadTabCache();">
+                            <option value="">-- Select Exam --</option>
+                            <option>First Term Exam</option>
+                            <option>Promotion Test Exam</option>
+                            <option>Test Exam</option>
+                        </select>
+                    </div>
+                    <div class="flex-col"><label>Exam Year</label><input type="number" id="exam_year" oninput="saveH(); preloadTabCache();"></div>
+                    <div class="flex-col"><label>Main Session</label><input type="text" id="main_session" oninput="saveH()"></div>
+                    <div class="flex-col"><label>Session</label><input type="text" id="session" oninput="saveH(); preloadTabCache();"></div>
+                </div>
+            </div>
+
+            <h3 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 20px;">Student Mark Entry</h3>
+            
+            <div class="flex-row">
+                <div class="flex-col"><label>Group</label><select id="group" onchange="saveH(); updateSubs(); preloadTabCache().then(() => rollInputHandler());"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                <div class="flex-col"><label>Roll Number</label><input type="number" id="roll" onchange="rollInputHandler()" onkeydown="rollKey(event)"></div>
+                <div class="flex-col"><label>Student Name</label><input type="text" id="name" readonly style="background-color: #f1f5f9;"></div>
+                <div class="flex-col"><label>Mobile Number</label><input type="text" id="mobile" placeholder="017XXXXXXXX" readonly style="background-color: #f1f5f9;"></div>
+            </div>
+            
+            <div class="flex-row">
+                <div class="flex-col"><label>Compulsory</label><select id="comp_sub" onchange="subChange('comp')"><option value="">-- Select --</option><option>Bangla</option><option>English</option><option>ICT</option></select></div>
+                <div class="flex-col"><label>Optional</label><select id="opt_sub" onchange="subChange('opt')"><option value="">-- Select --</option></select></div>
+                <div class="flex-col"><label>Additional</label><select id="add_sub" onchange="subChange('add')"><option value="">-- Select --</option></select></div>
+            </div>
+            <div class="flex-row" style="background: #edf2f7; padding: 20px; border-radius: 10px; margin-top: 15px;">
+                <div id="cq_div" class="flex-col"><label>CQ Marks</label><input type="text" id="cq" placeholder="0" onkeydown="enterKey(event)"></div>
+                <div id="mcq_div" class="flex-col"><label>MCQ Marks</label><input type="text" id="mcq" placeholder="0" onkeydown="enterKey(event)"></div>
+                <div id="prac_div" class="flex-col" style="display:none;"><label>Practical Marks</label><input type="text" id="prac" placeholder="0" onkeydown="enterKey(event)"></div>
+                <div id="total_div" class="flex-col" style="display:none;"><label>Total (English)</label><input type="text" id="direct_total" placeholder="0" onkeydown="enterKey(event)"></div>
+            </div>
+            
+            <button class="action-btn" onclick="validateSave()">Save Record</button>
+        </div>
+
+        <!-- Result Analysis Dashboard (Protected) -->
+        <div id="analysis-tab" class="section">
+            <h3 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 20px;">Result Analysis Dashboard</h3>
+            <div class="settings-box">
+                <div class="flex-row">
+                    <div class="flex-col"><label>Exam Name</label>
+                        <select id="an_exam_name">
+                            <option value="">-- Select Exam --</option>
+                            <option>First Term Exam</option>
+                            <option>Promotion Test Exam</option>
+                            <option>Test Exam</option>
+                        </select>
+                    </div>
+                    <div class="flex-col"><label>Exam Year</label><input type="number" id="an_exam_year"></div>
+                    <div class="flex-col"><label>Group</label><select id="an_group"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                    <div class="flex-col"><label>Session</label><input type="text" id="an_session"></div>
+                </div>
+                <button class="action-btn" onclick="generateAnalysis()">Analyze Results</button>
+            </div>
+            <div id="analysisContent"></div>
+        </div>
+
+        <!-- Merit List & Office Copy (Protected) -->
+        <div id="merit-tab" class="section">
+            <h3 style="border-left: 5px solid var(--primary); padding-left: 10px; margin-bottom: 20px;">Merit List & Office Copy</h3>
+            <div class="settings-box">
+                <div class="flex-row">
+                    <div class="flex-col"><label>Exam Name</label>
+                        <select id="mt_exam_name">
+                            <option value="">-- Select Exam --</option>
+                            <option>First Term Exam</option>
+                            <option>Promotion Test Exam</option>
+                            <option>Test Exam</option>
+                        </select>
+                    </div>
+                    <div class="flex-col"><label>Exam Year</label><input type="number" id="mt_exam_year"></div>
+                    <div class="flex-col"><label>Group</label><select id="mt_group"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
+                    <div class="flex-col"><label>Session</label><input type="text" id="mt_session"></div>
+                </div>
+                <button class="action-btn" onclick="generateMeritList()">Generate Merit List</button>
+            </div>
+            <div id="meritContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const SB_URL = "https://nsleouvsightlvnwausv.supabase.co";
+        const SB_KEY = "sb_publishable_oJJEYg56wJBVRRGBebGaMA_6X_FVmlG";
+        const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+        const LOGO_SRC = "images/logo.png";
+
+        const practicalSubs = ['ICT', 'Physics', 'Chemistry', 'Higher Mathematics', 'Biology', 'Geography', 'Psychology', 'Home Science', 'Agriculture Studies', 'Statistics'];
+        const artsBlocks = [["Sociology", "Social Work", "Islamic History & Culture"], ["Economics", "Civics & Good Governance"], ["Geography", "Logic"]];
+        
+        const subOrderMap = {
+            "Arts": ["Bangla", "English", "ICT", "Sociology", "Social Work", "Islamic History & Culture", "Economics", "Civics & Good Governance", "Geography", "Logic"],
+            "Science": ["Bangla", "English", "ICT", "Physics", "Chemistry", "Higher Mathematics", "Biology"],
+            "Business Studies": ["Bangla", "English", "ICT", "Accounting", "Business Organization & Management", "Production Management & Marketing"]
+        };
+
+        const subOptions = {
+            "Arts": { opt: ["Sociology", "Social Work", "Islamic History & Culture", "Economics", "Civics & Good Governance", "Geography", "Logic"], add: ["Psychology", "Islamic Studies", "Home Science", "Agriculture Studies"] },
+            "Science": { opt: ["Physics", "Chemistry", "Higher Mathematics", "Biology"], add: ["Higher Mathematics", "Biology"] },
+            "Business Studies": { opt: ["Accounting", "Business Organization & Management", "Production Management & Marketing"], add: ["Economics", "Statistics", "Home Science", "Agriculture Studies"] }
+        };
+
+        let currentMeritList = [];
+        
+        // Fast Caching Engine Global Variables
+        let cachedProfiles = []; // sorted active registered student profiles (All sessions included to detect duplicates)
+        let cachedMarksMap = {}; // key: roll_session -> existing marks data (Composite Key protection)
+        let activeStudentMarks = {}; // current student's temporary active marks object
+
+        async function getLogoBase64() {
+            try {
+                const response = await fetch(LOGO_SRC);
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.error("Local logo loading failed, falling back safely.", e);
+                return null;
+            }
+        }
+
+        async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            updateUI(session);
+
+            ['exam_name', 'exam_year', 'main_session', 'session', 'group'].forEach(id => {
+                document.getElementById(id).value = localStorage.getItem(id) || "";
+            });
+            
+            document.getElementById('db_session').value = localStorage.getItem('db_session') || "";
+
+            updateSubs();
+            await preloadTabCache();
+            focusMarkFieldIfSubSelected();
+            
+            // Enable keyboard visual optimizations for mobile screens
+            setupMobileKeyboardOptimizations();
+        }
+
+        // Optimize keyboard viewport scrolling on mobile devices (Strictly scrolling - no layout triggers)
+        function setupMobileKeyboardOptimizations() {
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    if (window.innerWidth <= 768) {
+                        setTimeout(() => {
+                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                    }
+                });
+            });
+        }
+
+        // Mobile specific Back button functionality
+        function goBackToMenu() {
+            document.body.classList.remove('full-screen-active');
+            showTab('home-tab', document.getElementById('btn-home'));
+        }
+
+        // Custom Popups Implementation
+        function showPop(title, msg, type = 'info', callback = null) {
+            const overlay = document.getElementById('customPopup');
+            const box = overlay.querySelector('.modal-box');
+            
+            box.className = 'modal-box';
+            if (type === 'warning') box.classList.add('warning');
+            else if (type === 'error') box.classList.add('error');
+            else if (type === 'success') box.classList.add('success');
+            
+            document.getElementById('popTitle').innerText = title;
+            document.getElementById('popMsg').innerText = msg;
+            
+            const btnArea = document.getElementById('popBtns');
+            btnArea.innerHTML = '';
+            
+            if (callback) {
+                const btnOk = document.createElement('button');
+                btnOk.className = 'modal-btn btn-ok';
+                btnOk.innerText = 'Confirm';
+                btnOk.onclick = () => {
+                    overlay.style.display = 'none';
+                    callback();
+                };
+                
+                const btnCancel = document.createElement('button');
+                btnCancel.className = 'modal-btn btn-cancel';
+                btnCancel.innerText = 'Cancel';
+                btnCancel.onclick = () => {
+                    overlay.style.display = 'none';
+                };
+                
+                btnArea.appendChild(btnOk);
+                btnArea.appendChild(btnCancel);
+            } else {
+                const btnOk = document.createElement('button');
+                btnOk.className = 'modal-btn btn-ok';
+                btnOk.innerText = 'OK';
+                btnOk.onclick = () => {
+                    overlay.style.display = 'none';
+                };
+                btnArea.appendChild(btnOk);
+            }
+            
+            overlay.style.display = 'flex';
+        }
+
+        function redirectToResult() {
+            const exam = encodeURIComponent(document.getElementById('srExam').value);
+            const year = encodeURIComponent(document.getElementById('srYear').value);
+            const group = encodeURIComponent(document.getElementById('srGroup').value);
+            const roll = encodeURIComponent(document.getElementById('srRoll').value);
+            
+            if(!exam || !year || !group || !roll) {
+                showPop("Required Field", "Please complete all search fields including Exam Name.", 'warning');
+                return;
+            }
+            window.location.href = `result.html?exam=${exam}&year=${year}&group=${group}&roll=${roll}`;
+        }
+
+        function updateUI(session) {
+            const adminButtons = document.querySelectorAll('.admin-only');
+            const authBtn = document.getElementById('auth-nav-btn');
+            
+            if (session) {
+                adminButtons.forEach(btn => btn.style.display = 'block');
+                authBtn.innerText = 'Admin Panel';
+                document.getElementById('loginFormContainer').style.display = 'none';
+                document.getElementById('logoutContainer').style.display = 'block';
+                document.getElementById('loginHeader').innerText = "Administrator Status";
+            } else {
+                adminButtons.forEach(btn => btn.style.display = 'none');
+                authBtn.innerText = 'Admin Login';
+                document.getElementById('loginFormContainer').style.display = 'block';
+                document.getElementById('logoutContainer').style.display = 'none';
+                document.getElementById('loginHeader').innerText = "Admin Login";
+                showTab('home-tab', document.getElementById('btn-home'));
+            }
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!email || !password) {
+                showPop("Required", "Please fill in all email and password fields.", "warning");
+                return;
+            }
+
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showPop("Login Failed", error.message, "error");
+            } else {
+                showPop("Success", "You are successfully logged in.", "success");
+                updateUI(data.session);
+                showTab('entry-tab', document.getElementById('btn-entry'));
+                await preloadTabCache();
+            }
+        }
+
+        async function handleLogout() {
+            const { error } = await sb.auth.signOut();
+            if (error) {
+                showPop("Error", "Could not sign out properly.", "error");
+            } else {
+                showPop("Signed Out", "Successfully logged out.", "info");
+                updateUI(null);
+            }
+        }
+
+        function showTab(id, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (btn) btn.classList.add('active');
+
+            // Toggle full screen mode on mobile for Marks Entry & Student Database screens
+            if (window.innerWidth <= 768 && (id === 'entry-tab' || id === 'database-tab')) {
+                document.body.classList.add('full-screen-active');
+            } else {
+                document.body.classList.remove('full-screen-active');
+            }
+
+            if(window.innerWidth <= 768 && btn) {
+                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        function syncAnalysisInputs() {
+            document.getElementById('an_exam_name').value = document.getElementById('exam_name').value;
+            document.getElementById('an_exam_year').value = document.getElementById('exam_year').value;
+            document.getElementById('an_group').value = document.getElementById('group').value;
+            document.getElementById('an_session').value = document.getElementById('session').value;
+        }
+
+        function syncMeritInputs() {
+            document.getElementById('mt_exam_name').value = document.getElementById('exam_name').value;
+            document.getElementById('mt_exam_year').value = document.getElementById('exam_year').value;
+            document.getElementById('mt_group').value = document.getElementById('group').value;
+            document.getElementById('mt_session').value = document.getElementById('session').value;
+        }
+
+        function focusMarkFieldIfSubSelected() {
+            const sub = document.getElementById('comp_sub').value || document.getElementById('opt_sub').value || document.getElementById('add_sub').value;
+            const roll = document.getElementById('roll').value;
+            if (sub && roll) {
+                if (sub === 'English') {
+                    const totalField = document.getElementById('direct_total');
+                    if (totalField) totalField.focus();
+                } else {
+                    const cqField = document.getElementById('cq');
+                    if (cqField) cqField.focus();
+                }
+            }
+        }
+
+        // Fast Caching Engine: Load Entire Directory Once in Memory (Strictly silent, NO auto-filling)
+        async function preloadTabCache() {
+            const g = document.getElementById('group').value;
+            const examName = document.getElementById('exam_name').value;
+            const examYear = document.getElementById('exam_year').value;
+
+            if (!g) return;
+
+            const rollInput = document.getElementById('roll');
+            rollInput.placeholder = "Preloading...";
+
+            try {
+                // Fetch ALL profiles for this group to detect session-wise duplicates instantly
+                let query = sb.from('student_profile').select('*').eq('student_group', g);
+                const { data: profiles, error: pError } = await query;
+                if (pError) throw pError;
+
+                cachedProfiles = (profiles || []).sort((a, b) => a.roll - b.roll);
+
+                // Fetch all existing exam records for this specific set
+                cachedMarksMap = {};
+                if (examName && examYear) {
+                    const { data: marks, error: mError } = await sb.from('student')
+                        .select('roll, academic_session, marks')
+                        .eq('student_group', g)
+                        .eq('exam_name', examName)
+                        .eq('exam_year', examYear);
+                    if (mError) throw mError;
+
+                    if (marks) {
+                        marks.forEach(m => {
+                            // Composite key with roll and academic session for bulletproof validation
+                            cachedMarksMap[m.roll + "_" + m.academic_session] = m.marks;
+                        });
+                    }
+                }
+                rollInput.placeholder = "Roll Number";
+            } catch (err) {
+                console.error("Cache preload error:", err);
+                rollInput.placeholder = "Roll Number";
+            }
+        }
+
+        function applyProfileToForm(student) {
+            document.getElementById('roll').value = student.roll;
+            document.getElementById('name').value = student.name || "";
+            document.getElementById('mobile').value = student.mobile || "";
+            document.getElementById('session').value = student.session || ""; // Auto-fill active session block
+            
+            // Set active marks using composite key roll_session to ensure data integrity
+            activeStudentMarks = cachedMarksMap[student.roll + "_" + student.session] || {};
+            saveH();
+            focusMarkFieldIfSubSelected();
+        }
+
+        // Custom session selector pop-up for duplicate student profiles in the directory
+        function showSessionSelectionPopup(records) {
+            const overlay = document.getElementById('customPopup');
+            const box = overlay.querySelector('.modal-box');
+            
+            box.className = 'modal-box warning'; 
+            document.getElementById('popTitle').innerText = "শিক্ষাবর্ষ নির্বাচন করুন";
+            document.getElementById('popMsg').innerText = `রোল ${records[0].roll} এর একাধিক শিক্ষাবর্ষের প্রোফাইল পাওয়া গেছে। তুমি কোন শিক্ষাবর্ষের শিক্ষার্থীর মার্ক ইনপুট দিতে চাও?`;
+            
+            const btnArea = document.getElementById('popBtns');
+            btnArea.innerHTML = '';
+            
+            records.forEach(student => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-select-option';
+                btn.innerText = `শিক্ষাবর্ষ: ${student.session} (নাম: ${student.name})`;
+                btn.onclick = () => {
+                    overlay.style.display = 'none';
+                    applyProfileToForm(student);
+                };
+                btnArea.appendChild(btn);
+            });
+
+            const btnCancel = document.createElement('button'); 
+            btnCancel.className = 'modal-btn btn-cancel'; 
+            btnCancel.innerText = 'বাতিল'; 
+            btnCancel.style.marginTop = '10px';
+            btnCancel.onclick = () => {
+                overlay.style.display = 'none';
+                clearStudentForm();
+            };
+            btnArea.appendChild(btnCancel);
+            
+            overlay.style.display = 'flex';
+        }
+
+        function clearStudentForm() {
+            document.getElementById('name').value = "";
+            document.getElementById('mobile').value = "";
+            activeStudentMarks = {};
+        }
+
+        // Fast In-Memory Roll Input Validation with duplicate checks and auto-fills instantly
+        function rollInputHandler() {
+            const rollVal = document.getElementById('roll').value.trim();
+            if (rollVal === "") {
+                clearStudentForm();
+                return;
+            }
+            const r = parseInt(rollVal);
+            if (isNaN(r)) {
+                clearStudentForm();
+                return;
+            }
+            // Filter by active selected group (cachedProfiles is already group pre-filtered)
+            const duplicates = cachedProfiles.filter(p => p.roll === r);
+            if (duplicates.length > 1) {
+                // Show selection popup only if actively looking at the entry-tab
+                if (document.getElementById('entry-tab').classList.contains('active')) {
+                    showSessionSelectionPopup(duplicates);
+                }
+            } else if (duplicates.length === 1) {
+                // Exactly one profile found - auto fill Name, Mobile and Session instantly without popping up
+                applyProfileToForm(duplicates[0]);
+            } else {
+                document.getElementById('name').value = "UNREGISTERED";
+                document.getElementById('mobile').value = "";
+                activeStudentMarks = {};
+            }
+        }
+
+        async function rollKey(e) {
+            if (e.key === 'Enter') {
+                rollInputHandler();
+            }
+        }
+
+        async function autoFetch() {
+            rollInputHandler();
+        }
+
+        function dbEnterKey(e) {
+            if (e.key === 'Enter') {
+                saveProfile();
+            }
+        }
+
+        async function saveProfile() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                showPop("Unauthorized", "Only logged-in admins can register student profiles.", "error");
+                return;
+            }
+
+            const name = document.getElementById('db_name').value.trim();
+            const group = document.getElementById('db_group').value.trim();
+            const roll = document.getElementById('db_roll').value.trim();
+            const mobile = document.getElementById('db_mobile').value.trim();
+            const session_val = document.getElementById('db_session').value.trim();
+
+            if (!name || !group || !roll || !mobile || !session_val) {
+                showPop("Required Fields", "All fields are required to register a student profile.", "warning");
+                return;
+            }
+
+            const { error } = await sb.from('student_profile').upsert({
+                name,
+                student_group: group,
+                roll: parseInt(roll),
+                mobile,
+                session: session_val
+            }, { onConflict: 'student_group, roll, session' });
+
+            if (error) {
+                showPop("Error Saving", "Could not register profile. " + error.message, "error");
+            } else {
+                const n = document.getElementById('saveNotice');
+                n.innerText = `Profile Saved! [Group: ${group}, Roll: ${roll}]`; 
+                n.style.display = 'block';
+                setTimeout(() => { n.style.display = 'none'; }, 3000);
+
+                ['db_name', 'db_roll', 'db_mobile'].forEach(id => document.getElementById(id).value = "");
+                document.getElementById('db_name').focus();
+                await preloadTabCache();
+            }
+        }
+
+        async function searchProfile() {
+            const group = document.getElementById('find_group').value;
+            const roll = document.getElementById('find_roll').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if(!roll) {
+                showPop("Required", "Please enter a Roll number to search.", "warning");
+                return;
+            }
+
+            if (resultsDiv.innerHTML !== "" && resultsDiv.dataset.lastSearch === `${group}_${roll}`) {
+                resultsDiv.innerHTML = "";
+                resultsDiv.dataset.lastSearch = "";
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p style="color:#64748b; font-size:13px;">Searching database...</p>';
+
+            const { data, error } = await sb.from('student_profile')
+                .select('*')
+                .eq('student_group', group)
+                .eq('roll', parseInt(roll));
+
+            if (error || !data || data.length === 0) {
+                resultsDiv.innerHTML = '<p style="color:var(--danger); font-size:13px; font-weight:bold;">No student profiles found with this Roll and Group.</p>';
+                resultsDiv.dataset.lastSearch = `${group}_${roll}`;
+                return;
+            }
+
+            let rows = "";
+            data.forEach(profile => {
+                rows += `<tr>
+                    <td><strong>${profile.roll}</strong></td>
+                    <td><strong>${profile.name}</strong></td>
+                    <td>${profile.student_group}</td>
+                    <td>${profile.mobile}</td>
+                    <td>${profile.session}</td>
+                    <td>
+                        <button class="menu-btn" style="padding:4px 10px; margin:0; display:inline-block; width:auto; background:var(--danger); color:white;" onclick="deleteProfile('${profile.student_group}', ${profile.roll}, '${profile.session}')">Delete</button>
+                    </td>
+                </tr>`;
+            });
+
+            resultsDiv.innerHTML = `
+                <div class="table-container">
+                    <table class="table-res">
+                        <thead>
+                            <tr style="background:#e2e8f0;">
+                                <th>Roll</th><th>Name</th><th>Group</th><th>Mobile</th><th>Session</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+            
+            resultsDiv.dataset.lastSearch = `${group}_${roll}`;
+        }
+
+        async function deleteProfile(group, roll, session) {
+            showPop(
+                "Confirm Delete", 
+                `Are you sure you want to delete profile: Roll ${roll} [${group}] Session ${session}?`, 
+                'warning', 
+                async () => {
+                    const { error } = await sb.from('student_profile')
+                        .delete()
+                        .eq('student_group', group)
+                        .eq('roll', roll)
+                        .eq('session', session);
+
+                    if (error) {
+                        showPop("Error", "Could not delete profile. " + error.message, "error");
+                    } else {
+                        showPop("Deleted", "Profile successfully deleted from directory.", "success");
+                        document.getElementById('searchResults').innerHTML = "";
+                        document.getElementById('find_roll').value = "";
+                        await preloadTabCache();
+                    }
+                }
+            );
+        }
+
+        function updateSubs() {
+            const g = document.getElementById('group').value;
+            const o = document.getElementById('opt_sub'), a = document.getElementById('add_sub');
+            o.innerHTML = a.innerHTML = '<option value="">-- Select --</option>';
+            subOptions[g]?.opt.forEach(s => o.innerHTML += `<option>${s}</option>`);
+            subOptions[g]?.add.forEach(s => a.innerHTML += `<option>${s}</option>`);
+        }
+
+        function subChange(type) {
+            const c = document.getElementById('comp_sub'), o = document.getElementById('opt_sub'), a = document.getElementById('add_sub');
+            if(type==='comp') { o.value=""; a.value=""; }
+            else if(type==='opt') { c.value=""; a.value=""; }
+            else if(type==='add') { c.value=""; o.value=""; }
+            const sub = c.value || o.value || a.value;
+            document.getElementById('cq_div').style.display = (sub==='English') ? 'none' : 'block';
+            document.getElementById('mcq_div').style.display = (sub==='English') ? 'none' : 'block';
+            document.getElementById('prac_div').style.display = practicalSubs.includes(sub) ? 'block' : 'none';
+            document.getElementById('total_div').style.display = (sub==='English') ? 'block' : 'none';
+            if(sub==='English') document.getElementById('direct_total').focus(); else document.getElementById('cq').focus();
+        }
+
+        async function validateSave() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) {
+                showPop("Unauthorized", "You must login to perform this action.", "error");
+                return;
+            }
+
+            const exam_name = document.getElementById('exam_name').value.trim();
+            const exam_year = document.getElementById('exam_year').value.trim();
+            const main_session = document.getElementById('main_session').value.trim();
+            const session_val = document.getElementById('session').value.trim();
+            const roll = parseInt(document.getElementById('roll').value.trim());
+            const group = document.getElementById('group').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const name = document.getElementById('name').value.trim();
+
+            if (!exam_name) { showPop("Required Field", "Please select an Exam Name.", 'warning'); return; }
+            if (!exam_year) { showPop("Required Field", "Please enter the Exam Year.", 'warning'); return; }
+            if (!main_session) { showPop("Required Field", "Please enter the Main Session.", 'warning'); return; }
+            if (!session_val) { showPop("Required Field", "Please enter the Session.", 'warning'); return; }
+            if (isNaN(roll)) { showPop("Required Field", "Please enter the Roll Number.", 'warning'); return; }
+            if (!group) { showPop("Required Field", "Please select a Group.", 'warning'); return; }
+            if (!mobile || name === "UNREGISTERED") { showPop("Unregistered Profile", "This Roll number is not registered in student directory.", 'error'); return; }
+
+            const sub = document.getElementById('comp_sub').value || document.getElementById('opt_sub').value || document.getElementById('add_sub').value;
+            if(!sub) { showPop("Required", "Please select a subject.", 'warning'); return; }
+
+            // Ensure profile is indeed registered
+            const isRegistered = cachedProfiles.some(p => p.roll === roll && p.session === session_val);
+            if (!isRegistered) {
+                showPop("Verification Failed", "Input roll and session combination is not registered in this academic section.", 'error');
+                return;
+            }
+
+            const type = document.getElementById('add_sub').value ? "additional" : (document.getElementById('opt_sub').value ? "optional" : "compulsory");
+
+            let cqR = "", mcqR = "", prR = "", totR = "";
+            if (sub === 'English') {
+                totR = document.getElementById('direct_total').value.trim();
+                if (totR === "") { showPop("Required Field", "Please enter English Total Marks.", 'warning'); return; }
+            } else {
+                cqR = document.getElementById('cq').value.trim();
+                mcqR = document.getElementById('mcq').value.trim();
+                if (cqR === "") { showPop("Required Field", "Please enter CQ Marks.", 'warning'); return; }
+                if (mcqR === "") { showPop("Required Field", "Please enter MCQ Marks.", 'warning'); return; }
+                
+                if (practicalSubs.includes(sub)) {
+                    prR = document.getElementById('prac').value.trim();
+                    if (prR === "") { showPop("Required Field", "Please enter Practical Marks.", 'warning'); return; }
+                }
+            }
+
+            const isCqAb = cqR.toLowerCase() === 'ab';
+            const isMcqAb = mcqR.toLowerCase() === 'ab';
+            const isPrAb = prR.toLowerCase() === 'ab';
+            const isTotAb = totR.toLowerCase() === 'ab';
+
+            const cq = isCqAb ? 0 : (parseInt(cqR) || 0);
+            const mcq = isMcqAb ? 0 : (parseInt(mcqR) || 0);
+            const pr = isPrAb ? 0 : (parseInt(prR) || 0);
+            const tot = isTotAb ? 0 : (parseInt(totR) || 0);
+
+            if(practicalSubs.includes(sub)) { 
+                if(!isCqAb && cq > 50) { showPop("Invalid Marks", "Max allowed CQ: 50", 'error'); return; }
+                if(!isMcqAb && mcq > 25) { showPop("Invalid Marks", "Max allowed MCQ: 25", 'error'); return; }
+                if(!isPrAb && pr > 25) { showPop("Invalid Marks", "Max allowed Practical: 25", 'error'); return; }
+            } else if(sub !== 'English') { 
+                if(!isCqAb && cq > 70) { showPop("Invalid Marks", "Max allowed CQ: 70", 'error'); return; }
+                if(!isMcqAb && mcq > 30) { showPop("Invalid Marks", "Max allowed MCQ: 30", 'error'); return; }
+            } else {
+                if(!isTotAb && tot > 100) { showPop("Invalid Marks", "Max allowed English Total: 100", 'error'); return; }
+            }
+
+            const oldM = activeStudentMarks || {};
+
+            // 1. Check if Subject Marks already exists (Duplication warning check as requested)
+            if (oldM[sub]) {
+                showPop(
+                    "Duplicate Subject Entry", 
+                    `Marks for "${sub}" have already been entered for this student. Do you want to overwrite?`, 
+                    'warning', 
+                    () => saveNow(oldM)
+                );
+                return;
+            }
+
+            // 2. Extra checks for additional subject limit
+            if (type === 'additional') {
+                let existingAdditionalSub = null;
+                for (let s in oldM) {
+                    if (oldM[s].type === 'additional' && s !== sub) {
+                        existingAdditionalSub = s;
+                        break;
+                    }
+                }
+                if (existingAdditionalSub) {
+                    showPop(
+                        "Multiple Additional Subjects Warning", 
+                        `Marks for additional subject "${existingAdditionalSub}" have already been entered. Do you want to replace it with "${sub}"?`, 
+                        'warning', 
+                        () => {
+                            delete oldM[existingAdditionalSub];
+                            saveNow(oldM);
+                        }
+                    );
+                    return;
+                }
+            }
+
+            // 3. Combination restrictions logic (Science optionals)
+            if (group === 'Science') {
+                if (sub === 'Higher Mathematics' || sub === 'Biology') {
+                    const otherSub = sub === 'Higher Mathematics' ? 'Biology' : 'Higher Mathematics';
+                    const otherSubData = oldM[otherSub];
+
+                    if (otherSubData) {
+                        if (type === 'optional' && otherSubData.type === 'optional') {
+                            showPop(
+                                "Subject Combination Error", 
+                                `Both Higher Mathematics and Biology cannot be taken as Optional subjects. One must be Optional and the other must be Additional.`, 
+                                'error'
+                            );
+                            return;
+                        }
+                        if (type === 'additional' && otherSubData.type === 'additional') {
+                            showPop(
+                                "Subject Combination Error", 
+                                `Both Higher Mathematics and Biology cannot be taken as Additional subjects. One must be Optional and the other must be Additional.`, 
+                                'error'
+                            );
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 4. Block checking logic (Arts division)
+            let blockConflict = null;
+            if(group === 'Arts') {
+                for(let block of artsBlocks) { 
+                    if(block.includes(sub)) { 
+                        const conflict = block.find(s => s !== sub && oldM[s]); 
+                        if(conflict) { 
+                            blockConflict = conflict;
+                            break;
+                        } 
+                    } 
+                }
+            }
+
+            if(blockConflict) {
+                showPop(
+                    "Block Subject Conflict", 
+                    `Marks for "${blockConflict}" have already been entered. Do you want to enter marks for "${sub}" instead?`, 
+                    'warning', 
+                    () => {
+                        delete oldM[blockConflict];
+                        saveNow(oldM);
+                    }
+                );
+                return;
+            }
+
+            saveNow(oldM);
+        }
+
+        async function saveNow(oldM) {
+            const { data: { session: currentSession } } = await sb.auth.getSession();
+            if (!currentSession) {
+                showPop("Unauthorized", "You must login to perform this action.", "error");
+                return;
+            }
+
+            const sub = document.getElementById('comp_sub').value || document.getElementById('opt_sub').value || document.getElementById('add_sub').value;
+            const type = document.getElementById('add_sub').value ? "additional" : (document.getElementById('opt_sub').value ? "optional" : "compulsory");
+            const cqR = document.getElementById('cq').value, mcqR = document.getElementById('mcq').value, prR = document.getElementById('prac').value, totR = document.getElementById('direct_total').value;
+            const isAb = (sub==='English') ? (totR.toLowerCase()==='ab') : (cqR.toLowerCase()==='ab' || mcqR.toLowerCase()==='ab' || (practicalSubs.includes(sub) && prR.toLowerCase()==='ab'));
+            const nCQ = isAb ? 0 : (parseInt(cqR)||0), nMCQ = isAb ? 0 : (parseInt(mcqR)||0), nPR = isAb ? 0 : (parseInt(prR)||0), nTOT = isAb ? 0 : (sub==='English' ? (parseInt(totR)||0) : nCQ+nMCQ+nPR);
+            let gp = 0;
+            if(!isAb) {
+                let fail = (nTOT < 33);
+                if(!fail && sub !== 'English') { if(practicalSubs.includes(sub)) { if(nCQ < 17 || nMCQ < 8 || nPR < 8) fail = true; } else { if(nCQ < 23 || nMCQ < 10) fail = true; } }
+                if(!fail) gp = nTOT >= 80 ? 5 : nTOT >= 70 ? 4 : nTOT >= 60 ? 3.5 : nTOT >= 50 ? 3 : nTOT >= 40 ? 2 : nTOT >= 33 ? 1 : 0;
+            }
+            const ms = document.getElementById('main_session').value, sn = document.getElementById('session').value;
+            oldM[sub] = { cq: isAb && cqR.toLowerCase()==='ab'?'Ab':nCQ, mcq: isAb && mcqR.toLowerCase()==='ab'?'Ab':nMCQ, prac: isAb && prR.toLowerCase()==='ab'?'Ab':nPR, total: isAb ? 'Absent' : nTOT, gp, lg: isAb ? 'Absent' : (gp>=5?'A+':gp>=4?'A':gp>=3.5?'A-':gp>=3?'B':gp>=2?'C':gp>=1?'D':'F'), type };
+            const r = parseInt(document.getElementById('roll').value), g = document.getElementById('group').value;
+            
+            const { error } = await sb.from('student').upsert({
+                roll: r, student_group: g, exam_name: document.getElementById('exam_name').value, exam_year: document.getElementById('exam_year').value, name: document.getElementById('name').value, mobile: document.getElementById('mobile').value, main_session: ms, academic_session: sn, student_type: (ms===sn?"Regular":"Irregular"), marks: oldM
+            }, { onConflict: 'roll, student_group, exam_name, exam_year' });
+            
+            if(!error) {
+                // Instantly update localized Cache Map using composite key
+                cachedMarksMap[r + "_" + sn] = oldM;
+                activeStudentMarks = oldM;
+
+                const n = document.getElementById('saveNotice');
+                n.innerText = `Data Saved! [Group: ${g}, Roll: ${r}]`; 
+                n.style.display = 'block';
+                setTimeout(() => {
+                    n.style.display = 'none';
+                }, 3000);
+                
+                ['cq','mcq','prac','direct_total'].forEach(id => document.getElementById(id).value = "");
+                
+                // Get Next Sequential Profile in cache and load it seamlessly without prompts
+                const currentIdx = cachedProfiles.findIndex(p => p.roll === r && p.session === sn);
+                if (currentIdx !== -1 && currentIdx + 1 < cachedProfiles.length) {
+                    const nextStudent = cachedProfiles[currentIdx + 1];
+                    applyProfileToForm(nextStudent);
+                } else {
+                    showPop("এন্ট্রি শেষ", "এই সেকশনের সকল নিবন্ধিত শিক্ষার্থীর মার্কস এন্ট্রি সম্পন্ন হয়েছে।", "success");
+                }
+            } else {
+                showPop("Error Saving", "Database write error. Check database connections.", "error");
+            }
+        }
+
+        function calcFinals(marks) {
+            let tWo = 0, tW = 0, hasF = false, tGP = 0, regC = 0;
+            Object.entries(marks).forEach(([s,m]) => {
+                const val = m.total === 'Absent' ? 0 : m.total;
+                tW += val;
+                if(m.type !== 'additional') { 
+                    tWo += val; 
+                    regC++; 
+                    if(m.lg==='F' || m.lg==='Absent') hasF=true; 
+                    tGP += m.gp; 
+                } else {
+                    tGP += Math.max(0, m.gp - 2);
+                }
+            });
+            const gpa = (hasF || regC < 6) ? "0.00" : Math.min(5, tGP / 6).toFixed(2);
+            return { tWo, tW, gpa, lg: gpa>=5?'A+':gpa>=4?'A':gpa>=3.5?'A-':gpa>=3?'B':gpa>=2?'C':gpa>=1?'D':'F' };
+        }
+
+        async function generateAnalysis() {
+            const en = document.getElementById('an_exam_name').value;
+            const ey = document.getElementById('an_exam_year').value;
+            const eg = document.getElementById('an_group').value;
+            const es = document.getElementById('an_session').value;
+
+            if(!en || !ey || !eg || !es) {
+                showPop("Required Filters", "Please fill in all filter inputs to analyze results.", 'warning');
+                return;
+            }
+
+            const { data, error } = await sb.from('student')
+                .select('*')
+                .eq('exam_name', en)
+                .eq('exam_year', ey)
+                .eq('student_group', eg)
+                .eq('academic_session', es);
+
+            if(error || !data || data.length === 0) {
+                showPop("No Records Found", "No data matches the selected criteria.", "error");
+                document.getElementById('analysisContent').innerHTML = "";
+                return;
+            }
+
+            let total = data.length, passed = 0, failed = 0;
+            let gradesCount = { 'A+': 0, 'A': 0, 'A-': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
+            let subStats = {};
+
+            data.forEach(st => {
+                const res = calcFinals(st.marks);
+                const gpa = parseFloat(res.gpa);
+                if(gpa > 0) passed++; else failed++;
+                gradesCount[res.lg] = (gradesCount[res.lg] || 0) + 1;
+
+                Object.entries(st.marks).forEach(([sub, m]) => {
+                    if(!subStats[sub]) subStats[sub] = { total: 0, passed: 0, failed: 0, totalMarks: 0 };
+                    subStats[sub].total++;
+                    const marksVal = m.total === 'Absent' ? 0 : m.total;
+                    subStats[sub].totalMarks += marksVal;
+                    if(m.lg !== 'F' && m.lg !== 'Absent') subStats[sub].passed++; else subStats[sub].failed++;
+                });
+            });
+
+            const passPercent = ((passed / total) * 100).toFixed(1);
+
+            let subRows = "";
+            Object.entries(subStats).forEach(([sub, st]) => {
+                const subPassPercent = ((st.passed / st.total) * 100).toFixed(1);
+                const avgMarks = (st.totalMarks / st.total).toFixed(1);
+                subRows += `<tr>
+                    <td><strong>${sub}</strong></td>
+                    <td>${st.total}</td>
+                    <td>${st.passed}</td>
+                    <td>${st.failed}</td>
+                    <td>${subPassPercent}%</td>
+                    <td>${avgMarks}</td>
+                </tr>`;
+            });
+
+            const metaObj = { en, ey, eg, es };
+
+            document.getElementById('analysisContent').innerHTML = `
+                <div style="display:flex; justify-content: flex-end; margin-bottom:15px;">
+                    <button class="action-btn" style="background:#8e44ad; max-width: 250px; margin:0; color:white;" onclick='exportAnalysisPDF(${total}, ${passed}, ${failed}, ${passPercent}, ${JSON.stringify(gradesCount)}, ${JSON.stringify(subStats)}, ${JSON.stringify(metaObj)})'>📄 Export Analysis Report as PDF</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stats-card"><h4>Total Students</h4><div class="value">${total}</div></div>
+                    <div class="stats-card" style="border-top: 4px solid var(--success);"><h4>Passed</h4><div class="value" style="color:var(--success);">${passed}</div></div>
+                    <div class="stats-card" style="border-top: 4px solid var(--danger);"><h4>Failed</h4><div class="value" style="color:var(--danger);">${failed}</div></div>
+                    <div class="stats-card"><h4>Pass Rate</h4><div class="value">${passPercent}%</div></div>
+                </div>
+
+                <h4 style="margin:20px 0 10px 0;">Grade Distribution</h4>
+                <div class="table-container">
+                    <table class="table-res" style="margin-bottom:25px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th>A+</th><th>A</th><th>A-</th><th>B</th><th>C</th><th>D</th><th>F/Absent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>${gradesCount['A+']}</strong></td>
+                                <td><strong>${gradesCount['A']}</strong></td>
+                                <td><strong>${gradesCount['A-']}</strong></td>
+                                <td><strong>${gradesCount['B']}</strong></td>
+                                <td><strong>${gradesCount['C']}</strong></td>
+                                <td><strong>${gradesCount['D']}</strong></td>
+                                <td><strong style="color:var(--danger);">${gradesCount['F']}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 style="margin:20px 0 10px 0;">Subject Wise Analysis Summary</h4>
+                <div class="table-container">
+                    <table class="table-res">
+                        <thead>
+                            <tr style="background:#edf2f7;">
+                                <th>Subject</th><th>Examinee</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Average Marks</th>
+                            </tr>
+                        </thead>
+                        <tbody>${subRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function exportAnalysisPDF(total, passed, failed, passPercent, gradesCount, subStats, meta) {
+            const logoData = await getLogoBase64();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 20, 22, 16, 16);
+            }
+            doc.setFontSize(20); 
+            doc.setTextColor(26, 188, 156); 
+            doc.setFont(undefined, 'bold');
+            doc.text("Birganj Govt. Degree College", 39, 31);
+            doc.setFontSize(10); 
+            doc.setTextColor(80, 80, 80); 
+            doc.setFont(undefined, 'normal');
+            doc.text("Birganj, Dinajpur", 39, 37);
+            doc.setFontSize(13); 
+            doc.setTextColor(0); 
+            doc.text("Result Analysis Summary Report", 39, 46);
+
+            doc.setFontSize(10);
+            doc.text(`Exam: ${meta.en} (${meta.ey})`, 20, 58);
+            doc.text(`Group: ${meta.eg} | Session: ${meta.es}`, 20, 64);
+
+            doc.autoTable({
+                startY: 70,
+                head: [['Summary Metrics', 'Value']],
+                body: [
+                    ['Total Registrations', total.toString()],
+                    ['Success (Passed)', passed.toString()],
+                    ['Unsuccessful (Failed)', failed.toString()],
+                    ['Overall Pass Percentage', `${passPercent}%`]
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [52, 73, 94] }
+            });
+
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text("Grade Wise Statistics", 20, doc.lastAutoTable.finalY + 10);
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 14,
+                head: [['A+', 'A', 'A-', 'B', 'C', 'D', 'F']],
+                body: [[
+                    gradesCount['A+'].toString(), gradesCount['A'].toString(), gradesCount['A-'].toString(),
+                    gradesCount['B'].toString(), gradesCount['C'].toString(), gradesCount['D'].toString(), gradesCount['F'].toString()
+                ]],
+                theme: 'grid',
+                headStyles: { fillColor: [26, 188, 156] }
+            });
+
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text("Detailed Subject Wise Summary", 20, doc.lastAutoTable.finalY + 10);
+            
+            const subBody = Object.entries(subStats).map(([sub, st]) => {
+                const subPassPercent = ((st.passed / st.total) * 100).toFixed(1);
+                const avgMarks = (st.totalMarks / st.total).toFixed(1);
+                return [sub, st.total, st.passed, st.failed, `${subPassPercent}%`, avgMarks];
+            });
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 14,
+                head: [['Subject', 'Examinee', 'Passed', 'Failed', 'Pass Rate', 'Average Marks']],
+                body: subBody,
+                theme: 'grid',
+                headStyles: { fillColor: [52, 73, 94] }
+            });
+
+            if (logoData) {
+                try { 
+                    doc.setGState(new doc.GState({opacity: 0.05})); 
+                    doc.addImage(logoData, 'PNG', 50, 95, 110, 110); 
+                    doc.setGState(new doc.GState({opacity: 1})); 
+                } catch(e){}
+            }
+
+            doc.save(`Result_Analysis_${meta.eg}_${meta.ey}.pdf`);
+        }
+
+        async function generateMeritList() {
+            const en = document.getElementById('mt_exam_name').value;
+            const ey = document.getElementById('mt_exam_year').value;
+            const eg = document.getElementById('mt_group').value;
+            const es = document.getElementById('mt_session').value;
+
+            if(!en || !ey || !eg || !es) {
+                showPop("Required Filters", "Please fill in all inputs to view the Merit List.", 'warning');
+                return;
+            }
+
+            const { data, error } = await sb.from('student')
+                .select('*')
+                .eq('exam_name', en)
+                .eq('exam_year', ey)
+                .eq('student_group', eg)
+                .eq('academic_session', es);
+
+            if(error || !data || data.length === 0) {
+                showPop("No Records Found", "No data matches the selected criteria.", "error");
+                document.getElementById('meritContent').innerHTML = "";
+                return;
+            }
+
+            let studentsWithStats = data.map(st => {
+                return { ...st, stats: calcFinals(st.marks) };
+            });
+
+            let passedStudents = studentsWithStats.filter(st => parseFloat(st.stats.gpa) > 0);
+
+            if(passedStudents.length === 0) {
+                showPop("No Passed Students", "There are no passed students in this section.", "warning");
+                document.getElementById('meritContent').innerHTML = "";
+                return;
+            }
+
+            passedStudents.sort((a, b) => {
+                const gpaA = parseFloat(a.stats.gpa);
+                const gpaB = parseFloat(b.stats.gpa);
+                if (gpaA !== gpaB) return gpaB - gpaA;
+                if (a.stats.tW !== b.stats.tW) return b.stats.tW - a.stats.tW;
+                return a.roll - b.roll;
+            });
+
+            currentMeritList = passedStudents.slice(0, 10);
+
+            let rows = "";
+            currentMeritList.forEach((st, idx) => {
+                rows += `<tr>
+                    <td><strong>${idx + 1}</strong></td>
+                    <td>${st.roll}</td>
+                    <td style="text-align:left; padding-left:15px;"><strong>${st.name}</strong></td>
+                    <td>${st.stats.gpa}</td>
+                    <td>${st.stats.lg}</td>
+                    <td>${st.stats.tWo}</td>
+                    <td>${st.stats.tW}</td>
+                    <td>
+                        <button class="menu-btn" style="padding:4px 10px; margin:0; display:inline-block; width:auto; background:var(--primary); color:var(--secondary);" onclick="generateMarksheet(currentMeritList[${idx}])">Download</button>
+                    </td>
+                </tr>`;
+            });
+
+            document.getElementById('meritContent').innerHTML = `
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="action-btn" style="flex:1; min-width:200px; background: #2980b9; color: white; margin-top:5px;" onclick="downloadAllMarksheetsUnified()">💾 Download All Top Marksheets (Single PDF)</button>
+                    <button class="action-btn" style="flex:1; min-width:200px; background: #27ae60; color: white; margin-top:5px;" onclick="exportMeritSheetPDF()">📄 Export Top 10 Merit List Copy</button>
+                </div>
+                <div class="table-container">
+                    <table class="table-res">
+                        <thead>
+                            <tr style="background:#e2e8f0;">
+                                <th>Merit Position</th><th>Roll</th><th style="text-align:left; padding-left:15px;">Student Name</th><th>GPA</th><th>Grade</th><th>Total (w/o Add)</th><th>Total (with Add)</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function generateMarksheet(st) {
+            const logoData = await getLogoBase64();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const res = calcFinals(st.marks);
+
+            doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.6);
+            doc.rect(8, 8, 194, 281); 
+            doc.setDrawColor(52, 73, 94); doc.setLineWidth(0.25);
+            doc.rect(9.5, 9.5, 191, 278); 
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 20, 20, 18, 18);
+            }
+            doc.setFontSize(22); 
+            doc.setTextColor(26, 188, 156); 
+            doc.setFont(undefined, 'bold');
+            doc.text("Birganj Govt. Degree College", 41, 28); 
+            doc.setFontSize(10); 
+            doc.setTextColor(80, 80, 80); 
+            doc.setFont(undefined, 'normal');
+            doc.text("Birganj, Dinajpur", 41, 34);
+            
+            doc.setFontSize(14); 
+            doc.setTextColor(52, 73, 94); 
+            doc.setFont(undefined, 'bold');
+            doc.text("Academic Transcript", 41, 41);
+            doc.setFontSize(11);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont(undefined, 'normal');
+            doc.text(`${st.exam_name} - ${st.exam_year}`, 41, 47);
+
+            doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.4);
+            doc.line(20, 50, 190, 50);
+
+            doc.setFillColor(248, 250, 252); doc.roundedRect(20, 54, 170, 22, 3, 3, 'F'); 
+            doc.setFontSize(10); doc.setTextColor(0); doc.setFont(undefined, 'bold');
+            doc.text(`Name: ${st.name}`, 24, 60);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Roll: ${st.roll}   |   Group: ${st.student_group}`, 24, 65);
+            doc.text(`Academic Session: ${st.academic_session}   |   Student Type: ${st.student_type}`, 24, 71);
+
+            const order = subOrderMap[st.student_group] || [];
+            const sorted = Object.entries(st.marks).sort((a,b) => (order.indexOf(a[0])===-1?99:order.indexOf(a[0])) - (order.indexOf(b[0])===-1?99:order.indexOf(b[0])));
+            const body = sorted.map(([s,m]) => [s+(m.type==='additional'?' (Add)':''), m.cq, m.mcq, m.prac||'-', m.total, m.gp.toFixed(2), m.lg]);
+
+            doc.autoTable({ 
+                startY: 83, 
+                head: [['Subject','CQ','MCQ','Prac','Total','GP','LG']], 
+                body, 
+                theme: 'grid', 
+                headStyles: { fillColor: [26, 188, 156], fontStyle: 'bold' },
+                styles: { cellPadding: 4.8, fontSize: 10, valign: 'middle', halign: 'center' }, 
+                columnStyles: { 0: { halign: 'left' } },
+                alternateRowStyles: { fillColor: [250, 252, 253] }
+            });
+
+            if (logoData) {
+                try { 
+                    doc.setGState(new doc.GState({opacity: 0.06})); 
+                    doc.addImage(logoData, 'PNG', 50, 95, 110, 110); 
+                    doc.setGState(new doc.GState({opacity: 1})); 
+                } catch(e){}
+            }
+
+            const fY = doc.lastAutoTable.finalY + 12;
+            doc.setFillColor(230, 247, 245); doc.roundedRect(20, fY, 65, 18, 2, 2, 'F');
+            doc.setFont(undefined, 'bold'); doc.setFontSize(11); doc.setTextColor(26, 188, 156);
+            doc.text(`GPA: ${res.gpa}   |   Grade: ${res.lg}`, 24, fY + 11);
+
+            doc.setTextColor(0); doc.setFontSize(10);
+            doc.text(`Total Marks (w/o Add): ${res.tWo}`, 125, fY + 7);
+            doc.text(`Total Marks (with Add): ${res.tW}`, 125, fY + 13);
+
+            const principalY = Math.max(262, fY + 36); 
+            doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+            doc.line(150, principalY, 190, principalY); doc.setFont(undefined, 'bold');
+            doc.text("Principal", 160, principalY + 5);
+
+            doc.save(`Transcript_${st.roll}_${Date.now()}.pdf`);
+        }
+
+        async function downloadAllMarksheetsUnified() {
+            if(!currentMeritList || currentMeritList.length === 0) return;
+            const logoData = await getLogoBase64();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            for(let i = 0; i < currentMeritList.length; i++) {
+                const st = currentMeritList[i];
+                const res = st.stats;
+                if (i > 0) doc.addPage();
+                
+                doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.6); doc.rect(8, 8, 194, 281); 
+                doc.setDrawColor(52, 73, 94); doc.setLineWidth(0.25); doc.rect(9.5, 9.5, 191, 278);
+
+                if (logoData) {
+                    doc.addImage(logoData, 'PNG', 20, 20, 18, 18);
+                }
+                doc.setFontSize(22); doc.setTextColor(26, 188, 156); doc.setFont(undefined, 'bold');
+                doc.text("Birganj Govt. Degree College", 41, 28);
+                doc.setFontSize(10); doc.setTextColor(80, 80, 80); doc.setFont(undefined, 'normal');
+                doc.text("Birganj, Dinajpur", 41, 34);
+                
+                doc.setFontSize(14); doc.setTextColor(52, 73, 94); doc.setFont(undefined, 'bold');
+                doc.text("Academic Transcript", 41, 41);
+                doc.setFontSize(11); doc.setTextColor(100, 100, 100); doc.setFont(undefined, 'normal');
+                doc.text(`${st.exam_name} - ${st.exam_year}`, 41, 47);
+
+                doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.4); doc.line(20, 50, 190, 50);
+
+                doc.setFillColor(248, 250, 252); doc.roundedRect(20, 54, 170, 22, 3, 3, 'F'); 
+                doc.setFontSize(10); doc.setTextColor(0); doc.setFont(undefined, 'bold');
+                doc.text(`Name: ${st.name}`, 24, 60);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Roll: ${st.roll}   |   Group: ${st.student_group}`, 24, 65);
+                doc.text(`Academic Session: ${st.academic_session}   |   Student Type: ${st.student_type}`, 24, 71);
+
+                const order = subOrderMap[st.student_group] || [];
+                const sorted = Object.entries(st.marks).sort((a,b) => (order.indexOf(a[0])===-1?99:order.indexOf(a[0])) - (order.indexOf(b[0])===-1?99:order.indexOf(b[0])));
+                const body = sorted.map(([s,m]) => [s+(m.type==='additional'?' (Add)':''), m.cq, m.mcq, m.prac||'-', m.total, m.gp.toFixed(2), m.lg]);
+
+                doc.autoTable({ 
+                    startY: 83, head: [['Subject','CQ','MCQ','Prac','Total','GP','LG']], body, theme: 'grid', 
+                    headStyles: { fillColor: [26, 188, 156], fontStyle: 'bold' },
+                    styles: { cellPadding: 4.8, fontSize: 10, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { halign: 'left' } }, alternateRowStyles: { fillColor: [250, 252, 253] }
+                });
+
+                if (logoData) {
+                    try { doc.setGState(new doc.GState({opacity: 0.06})); doc.addImage(logoData, 'PNG', 50, 95, 110, 110); doc.setGState(new doc.GState({opacity: 1})); } catch(e){}
+                }
+
+                const fY = doc.lastAutoTable.finalY + 12;
+                doc.setFillColor(230, 247, 245); doc.roundedRect(20, fY, 65, 18, 2, 2, 'F');
+                doc.setFont(undefined, 'bold'); doc.setFontSize(11); doc.setTextColor(26, 188, 156);
+                doc.text(`GPA: ${res.gpa}   |   Grade: ${res.lg}`, 24, fY + 11);
+
+                doc.setTextColor(0); doc.setFontSize(10);
+                doc.text(`Total Marks (w/o Add): ${res.tWo}`, 125, fY + 7);
+                doc.text(`Total Marks (with Add): ${res.tW}`, 125, fY + 13);
+
+                const principalY = Math.max(262, fY + 36); 
+                doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+                doc.line(150, principalY, 190, principalY); doc.setFont(undefined, 'bold');
+                doc.text("Principal", 160, principalY + 5);
+            }
+
+            const groupName = document.getElementById('mt_group').value;
+            doc.save(`Bulk_Transcripts_${groupName}_${document.getElementById('mt_exam_year').value}.pdf`);
+        }
+
+        async function exportMeritSheetPDF() {
+            if(currentMeritList.length === 0) return;
+            const logoData = await getLogoBase64();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            const en = document.getElementById('mt_exam_name').value;
+            const ey = document.getElementById('mt_exam_year').value;
+            const eg = document.getElementById('mt_group').value;
+            const es = document.getElementById('mt_session').value;
+
+            doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.6); doc.rect(8, 8, 194, 281); 
+            doc.setDrawColor(52, 73, 94); doc.setLineWidth(0.25); doc.rect(9.5, 9.5, 191, 278);
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 20, 20, 18, 18);
+            }
+            doc.setFontSize(22); doc.setTextColor(26, 188, 156); doc.setFont(undefined, 'bold');
+            doc.text("Birganj Govt. Degree College", 41, 28);
+            doc.setFontSize(10); doc.setTextColor(80, 80, 80); doc.setFont(undefined, 'normal');
+            doc.text("Birganj, Dinajpur", 41, 34);
+            doc.setFontSize(13); doc.setTextColor(52, 73, 94); doc.setFont(undefined, 'bold');
+            doc.text(`Official Merit List Copy (Passed Only)`, 41, 43);
+
+            doc.setDrawColor(26, 188, 156); doc.setLineWidth(0.4); doc.line(20, 50, 190, 50);
+
+            doc.setFillColor(248, 250, 252); doc.roundedRect(20, 54, 170, 22, 3, 3, 'F'); 
+            doc.setFontSize(10); doc.setTextColor(0); doc.setFont(undefined, 'bold');
+            doc.text(`Exam Name: ${en}`, 24, 60);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Group: ${eg}   |   Exam Year: ${ey}`, 24, 65);
+            doc.text(`Academic Session: ${es}   |   Date Generated: ${new Date().toLocaleDateString()}`, 24, 71);
+
+            const body = currentMeritList.map((st, idx) => [(idx + 1).toString(), st.roll, st.name, st.stats.gpa, st.stats.lg, st.stats.tWo, st.stats.tW]);
+
+            doc.autoTable({
+                startY: 83,
+                head: [['Rank', 'Roll', 'Student Name', 'GPA', 'Grade', 'Total (w/o Add)', 'Total (with Add)']],
+                body, theme: 'grid', headStyles: { fillColor: [52, 73, 94], fontStyle: 'bold' },
+                styles: { cellPadding: 4.8, fontSize: 10, valign: 'middle', halign: 'center' },
+                columnStyles: { 2: { halign: 'left' } }, alternateRowStyles: { fillColor: [250, 252, 253] }
+            });
+
+            if (logoData) {
+                try { doc.setGState(new doc.GState({opacity: 0.05})); doc.addImage(logoData, 'PNG', 50, 95, 110, 110); doc.setGState(new doc.GState({opacity: 1})); } catch(e){}
+            }
+
+            const fY = doc.lastAutoTable.finalY;
+            const principalY = Math.max(262, fY + 28);
+            doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+            doc.line(150, principalY, 190, principalY); doc.setFont(undefined, 'bold');
+            doc.text("Principal", 160, principalY + 5);
+
+            doc.save(`Top_Merit_List_${eg}_Session_${es}.pdf`);
+        }
+
+        function dbEnterKey(e) { if(e.key==='Enter') saveProfile(); }
+        function rollKey(e) { if(e.key==='Enter') rollInputHandler(); }
+        function enterKey(e) { if(e.key==='Enter') validateSave(); }
+        function syncAnalysisInputs() { document.getElementById('an_exam_name').value = document.getElementById('exam_name').value; document.getElementById('an_exam_year').value = document.getElementById('exam_year').value; document.getElementById('an_group').value = document.getElementById('group').value; document.getElementById('an_session').value = document.getElementById('session').value; }
+        function syncMeritInputs() { document.getElementById('mt_exam_name').value = document.getElementById('exam_name').value; document.getElementById('mt_exam_year').value = document.getElementById('exam_year').value; document.getElementById('mt_group').value = document.getElementById('group').value; document.getElementById('mt_session').value = document.getElementById('session').value; }
+        function toast(m) { const n = document.getElementById('saveNotice'); n.innerText = m; n.style.display = 'block'; setTimeout(() => n.style.display = 'none', 3000); }
+    </script>
+</body>
+</html>
