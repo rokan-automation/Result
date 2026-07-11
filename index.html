@@ -559,11 +559,14 @@
                 <div class="flex-col"><label>Additional</label><select id="add_sub" onchange="subChange('add')"><option value="">-- Select --</option></select></div>
             </div>
             <div class="flex-row" style="background: #edf2f7; padding: 20px; border-radius: 10px; margin-top: 15px;">
-                <div id="cq_div" class="flex-col"><label>CQ Marks</label><input type="text" id="cq" placeholder="0" onkeydown="enterKey(event)"></div>
-                <div id="mcq_div" class="flex-col"><label>MCQ Marks</label><input type="text" id="mcq" placeholder="0" onkeydown="enterKey(event)"></div>
-                <div id="prac_div" class="flex-col" style="display:none;"><label>Practical Marks</label><input type="text" id="prac" placeholder="0" onkeydown="enterKey(event)"></div>
-                <div id="total_div" class="flex-col" style="display:none;"><label>Total (English)</label><input type="text" id="direct_total" placeholder="0" onkeydown="enterKey(event)"></div>
+                <div id="cq_div" class="flex-col"><label>CQ Marks</label><input type="text" id="cq" placeholder="0 or AB" onkeydown="enterKey(event)"></div>
+                <div id="mcq_div" class="flex-col"><label>MCQ Marks</label><input type="text" id="mcq" placeholder="0 or AB" onkeydown="enterKey(event)"></div>
+                <div id="prac_div" class="flex-col" style="display:none;"><label>Practical Marks</label><input type="text" id="prac" placeholder="0 or AB" onkeydown="enterKey(event)"></div>
+                <div id="total_div" class="flex-col" style="display:none;"><label>Total (English)</label><input type="text" id="direct_total" placeholder="0 or AB" onkeydown="enterKey(event)"></div>
             </div>
+            <span style="font-size: 12.5px; color: #475569; margin-top: 8px; display: block; font-weight: 500;">
+                💡 <em>অনুপস্থিত শিক্ষার্থীর ক্ষেত্রে যেকোনো মার্কস ফিল্ডে ইংরেজিতে <strong>AB</strong> লিখুন।</em>
+            </span>
             
             <button class="action-btn" onclick="validateSave()">Save Record</button>
         </div>
@@ -683,6 +686,7 @@
 
             updateSubs();
             await preloadTabCache();
+            syncSubjectFieldVisibility();
             focusMarkFieldIfSubSelected();
             
             // Enable keyboard visual optimizations for mobile screens
@@ -820,7 +824,24 @@
             }
         }
 
-        function showTab(id, btn) {
+        // Keeps UI subject field visible and syncs dynamically based on active selection
+        function syncSubjectFieldVisibility() {
+            const c = document.getElementById('comp_sub'), o = document.getElementById('opt_sub'), a = document.getElementById('add_sub');
+            const sub = c.value || o.value || a.value;
+            if (!sub) {
+                document.getElementById('cq_div').style.display = 'block';
+                document.getElementById('mcq_div').style.display = 'block';
+                document.getElementById('prac_div').style.display = 'none';
+                document.getElementById('total_div').style.display = 'none';
+                return;
+            }
+            document.getElementById('cq_div').style.display = (sub==='English') ? 'none' : 'block';
+            document.getElementById('mcq_div').style.display = (sub==='English') ? 'none' : 'block';
+            document.getElementById('prac_div').style.display = practicalSubs.includes(sub) ? 'block' : 'none';
+            document.getElementById('total_div').style.display = (sub==='English') ? 'block' : 'none';
+        }
+
+        async function showTab(id, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -835,6 +856,13 @@
 
             if(window.innerWidth <= 768 && btn) {
                 btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+
+            // Warm up/preload cache and ensure UI stability when switching back to entry tab
+            if (id === 'entry-tab') {
+                await preloadTabCache();
+                rollInputHandler();
+                syncSubjectFieldVisibility();
             }
         }
 
@@ -904,6 +932,7 @@
             // Set active marks using composite key roll_session to ensure data integrity
             activeStudentMarks = cachedMarksMap[student.roll + "_" + student.session] || {};
             saveH();
+            syncSubjectFieldVisibility();
             focusMarkFieldIfSubSelected();
         }
 
@@ -1124,12 +1153,15 @@
             if(type==='comp') { o.value=""; a.value=""; }
             else if(type==='opt') { c.value=""; a.value=""; }
             else if(type==='add') { c.value=""; o.value=""; }
+            
+            syncSubjectFieldVisibility();
+            
             const sub = c.value || o.value || a.value;
-            document.getElementById('cq_div').style.display = (sub==='English') ? 'none' : 'block';
-            document.getElementById('mcq_div').style.display = (sub==='English') ? 'none' : 'block';
-            document.getElementById('prac_div').style.display = practicalSubs.includes(sub) ? 'block' : 'none';
-            document.getElementById('total_div').style.display = (sub==='English') ? 'block' : 'none';
-            if(sub==='English') document.getElementById('direct_total').focus(); else document.getElementById('cq').focus();
+            if(sub==='English') {
+                document.getElementById('direct_total').focus();
+            } else {
+                document.getElementById('cq').focus();
+            }
         }
 
         async function validateSave() {
@@ -1160,7 +1192,7 @@
             if(!sub) { showPop("Required", "Please select a subject.", 'warning'); return; }
 
             // Ensure profile is indeed registered
-            const isRegistered = cachedProfiles.some(p => p.roll === roll && p.session === session_val);
+            const isRegistered = cachedProfiles.some(p => p.roll === roll && p.session.trim().toLowerCase() === session_val.trim().toLowerCase());
             if (!isRegistered) {
                 showPop("Verification Failed", "Input roll and session combination is not registered in this academic section.", 'error');
                 return;
@@ -1205,15 +1237,31 @@
                 if(!isTotAb && tot > 100) { showPop("Invalid Marks", "Max allowed English Total: 100", 'error'); return; }
             }
 
-            const oldM = activeStudentMarks || {};
+            // --- FETCH LIVE/REAL-TIME STATE FROM SUPABASE DATABASE (Fixes stale local cache issues) ---
+            const { data: dbData, error: dbError } = await sb.from('student')
+                .select('marks')
+                .eq('roll', roll)
+                .eq('student_group', group)
+                .eq('exam_name', exam_name)
+                .eq('exam_year', exam_year)
+                .maybeSingle();
 
-            // 1. Check if Subject Marks already exists (Duplication warning check as requested)
-            if (oldM[sub]) {
+            let realTimeMarks = {};
+            if (!dbError && dbData && dbData.marks) {
+                realTimeMarks = dbData.marks;
+            } else {
+                // If student is manually deleted in Supabase, sync/wipe the stale local cache
+                cachedMarksMap[roll + "_" + session_val] = {};
+                activeStudentMarks = {};
+            }
+
+            // 1. Check if Subject Marks already exists (Duplication warning check) using the live database state
+            if (realTimeMarks[sub]) {
                 showPop(
                     "Duplicate Subject Entry", 
                     `Marks for "${sub}" have already been entered for this student. Do you want to overwrite?`, 
                     'warning', 
-                    () => saveNow(oldM)
+                    () => saveNow(realTimeMarks)
                 );
                 return;
             }
@@ -1221,8 +1269,8 @@
             // 2. Extra checks for additional subject limit
             if (type === 'additional') {
                 let existingAdditionalSub = null;
-                for (let s in oldM) {
-                    if (oldM[s].type === 'additional' && s !== sub) {
+                for (let s in realTimeMarks) {
+                    if (realTimeMarks[s].type === 'additional' && s !== sub) {
                         existingAdditionalSub = s;
                         break;
                     }
@@ -1233,8 +1281,8 @@
                         `Marks for additional subject "${existingAdditionalSub}" have already been entered. Do you want to replace it with "${sub}"?`, 
                         'warning', 
                         () => {
-                            delete oldM[existingAdditionalSub];
-                            saveNow(oldM);
+                            delete realTimeMarks[existingAdditionalSub];
+                            saveNow(realTimeMarks);
                         }
                     );
                     return;
@@ -1245,7 +1293,7 @@
             if (group === 'Science') {
                 if (sub === 'Higher Mathematics' || sub === 'Biology') {
                     const otherSub = sub === 'Higher Mathematics' ? 'Biology' : 'Higher Mathematics';
-                    const otherSubData = oldM[otherSub];
+                    const otherSubData = realTimeMarks[otherSub];
 
                     if (otherSubData) {
                         if (type === 'optional' && otherSubData.type === 'optional') {
@@ -1273,7 +1321,7 @@
             if(group === 'Arts') {
                 for(let block of artsBlocks) { 
                     if(block.includes(sub)) { 
-                        const conflict = block.find(s => s !== sub && oldM[s]); 
+                        const conflict = block.find(s => s !== sub && realTimeMarks[s]); 
                         if(conflict) { 
                             blockConflict = conflict;
                             break;
@@ -1288,14 +1336,14 @@
                     `Marks for "${blockConflict}" have already been entered. Do you want to enter marks for "${sub}" instead?`, 
                     'warning', 
                     () => {
-                        delete oldM[blockConflict];
-                        saveNow(oldM);
+                        delete realTimeMarks[blockConflict];
+                        saveNow(realTimeMarks);
                     }
                 );
                 return;
             }
 
-            saveNow(oldM);
+            saveNow(realTimeMarks);
         }
 
         async function saveNow(oldM) {
@@ -1351,22 +1399,43 @@
             }
         }
 
+        // Expanded logic to explicitly process and flag 'Absent' status per student
         function calcFinals(marks) {
-            let tWo = 0, tW = 0, hasF = false, tGP = 0, regC = 0;
+            let tWo = 0, tW = 0, hasF = false, hasAbsent = false, tGP = 0, regC = 0;
             Object.entries(marks).forEach(([s,m]) => {
                 const val = m.total === 'Absent' ? 0 : m.total;
                 tW += val;
                 if(m.type !== 'additional') { 
                     tWo += val; 
                     regC++; 
-                    if(m.lg==='F' || m.lg==='Absent') hasF=true; 
+                    if(m.lg==='F') hasF=true; 
+                    if(m.lg==='Absent') hasAbsent=true;
                     tGP += m.gp; 
                 } else {
                     tGP += Math.max(0, m.gp - 2);
                 }
             });
-            const gpa = (hasF || regC < 6) ? "0.00" : Math.min(5, tGP / 6).toFixed(2);
-            return { tWo, tW, gpa, lg: gpa>=5?'A+':gpa>=4?'A':gpa>=3.5?'A-':gpa>=3?'B':gpa>=2?'C':gpa>=1?'D':'F' };
+            const isAbsent = hasAbsent;
+            const gpa = (hasF || hasAbsent || regC < 6) ? "0.00" : Math.min(5, tGP / 6).toFixed(2);
+            let lg = 'F';
+            if (isAbsent) {
+                lg = 'Absent';
+            } else if (gpa >= 5) {
+                lg = 'A+';
+            } else if (gpa >= 4) {
+                lg = 'A';
+            } else if (gpa >= 3.5) {
+                lg = 'A-';
+            } else if (gpa >= 3) {
+                lg = 'B';
+            } else if (gpa >= 2) {
+                lg = 'C';
+            } else if (gpa >= 1) {
+                lg = 'D';
+            } else {
+                lg = 'F';
+            }
+            return { tWo, tW, gpa, lg, isAbsent };
         }
 
         async function generateAnalysis() {
@@ -1393,36 +1462,57 @@
                 return;
             }
 
-            let total = data.length, passed = 0, failed = 0;
-            let gradesCount = { 'A+': 0, 'A': 0, 'A-': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
+            let total = data.length, passed = 0, failed = 0, absentCount = 0;
+            let gradesCount = { 'A+': 0, 'A': 0, 'A-': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0, 'Absent': 0 };
             let subStats = {};
 
             data.forEach(st => {
                 const res = calcFinals(st.marks);
                 const gpa = parseFloat(res.gpa);
-                if(gpa > 0) passed++; else failed++;
-                gradesCount[res.lg] = (gradesCount[res.lg] || 0) + 1;
+                if (res.isAbsent) {
+                    absentCount++;
+                    gradesCount['Absent'] = (gradesCount['Absent'] || 0) + 1;
+                } else {
+                    if(gpa > 0) passed++; else failed++;
+                    gradesCount[res.lg] = (gradesCount[res.lg] || 0) + 1;
+                }
 
                 Object.entries(st.marks).forEach(([sub, m]) => {
-                    if(!subStats[sub]) subStats[sub] = { total: 0, passed: 0, failed: 0, totalMarks: 0 };
+                    if(!subStats[sub]) subStats[sub] = { total: 0, passed: 0, failed: 0, absent: 0, totalMarks: 0 };
                     subStats[sub].total++;
-                    const marksVal = m.total === 'Absent' ? 0 : m.total;
-                    subStats[sub].totalMarks += marksVal;
-                    if(m.lg !== 'F' && m.lg !== 'Absent') subStats[sub].passed++; else subStats[sub].failed++;
+                    
+                    const isSubAbsent = (m.total === 'Absent' || m.lg === 'Absent' || String(m.total).toLowerCase() === 'absent');
+                    
+                    if(isSubAbsent) {
+                        subStats[sub].absent++;
+                    } else {
+                        const marksVal = parseFloat(m.total) || 0;
+                        subStats[sub].totalMarks += marksVal;
+                        if(m.lg !== 'F') {
+                            subStats[sub].passed++;
+                        } else {
+                            subStats[sub].failed++;
+                        }
+                    }
                 });
             });
 
-            const passPercent = ((passed / total) * 100).toFixed(1);
+            // Adjust overall statistics based strictly on present examinees to fix inaccurate pass rates
+            const examinees = total - absentCount;
+            const passPercent = examinees > 0 ? ((passed / examinees) * 100).toFixed(1) : "0.0";
 
             let subRows = "";
             Object.entries(subStats).forEach(([sub, st]) => {
-                const subPassPercent = ((st.passed / st.total) * 100).toFixed(1);
-                const avgMarks = (st.totalMarks / st.total).toFixed(1);
+                const subPresent = st.total - st.absent;
+                const subPassPercent = subPresent > 0 ? ((st.passed / subPresent) * 100).toFixed(1) : "0.0";
+                const avgMarks = subPresent > 0 ? (st.totalMarks / subPresent).toFixed(1) : "0.0";
                 subRows += `<tr>
                     <td><strong>${sub}</strong></td>
                     <td>${st.total}</td>
+                    <td>${subPresent}</td>
                     <td>${st.passed}</td>
                     <td>${st.failed}</td>
+                    <td style="color: ${st.absent > 0 ? 'var(--danger)' : 'inherit'}; font-weight: ${st.absent > 0 ? 'bold' : 'normal'};">${st.absent}</td>
                     <td>${subPassPercent}%</td>
                     <td>${avgMarks}</td>
                 </tr>`;
@@ -1432,12 +1522,14 @@
 
             document.getElementById('analysisContent').innerHTML = `
                 <div style="display:flex; justify-content: flex-end; margin-bottom:15px;">
-                    <button class="action-btn" style="background:#8e44ad; max-width: 250px; margin:0; color:white;" onclick='exportAnalysisPDF(${total}, ${passed}, ${failed}, ${passPercent}, ${JSON.stringify(gradesCount)}, ${JSON.stringify(subStats)}, ${JSON.stringify(metaObj)})'>📄 Export Analysis Report as PDF</button>
+                    <button class="action-btn" style="background:#8e44ad; max-width: 250px; margin:0; color:white;" onclick='exportAnalysisPDF(${total}, ${examinees}, ${passed}, ${failed}, ${absentCount}, ${passPercent}, ${JSON.stringify(gradesCount)}, ${JSON.stringify(subStats)}, ${JSON.stringify(metaObj)})'>📄 Export Analysis Report as PDF</button>
                 </div>
                 <div class="stats-grid">
-                    <div class="stats-card"><h4>Total Students</h4><div class="value">${total}</div></div>
+                    <div class="stats-card"><h4>Total Registered</h4><div class="value">${total}</div></div>
+                    <div class="stats-card"><h4>Examinees (Present)</h4><div class="value">${examinees}</div></div>
                     <div class="stats-card" style="border-top: 4px solid var(--success);"><h4>Passed</h4><div class="value" style="color:var(--success);">${passed}</div></div>
                     <div class="stats-card" style="border-top: 4px solid var(--danger);"><h4>Failed</h4><div class="value" style="color:var(--danger);">${failed}</div></div>
+                    <div class="stats-card" style="border-top: 4px solid var(--warning);"><h4>Absent</h4><div class="value" style="color:var(--warning);">${absentCount}</div></div>
                     <div class="stats-card"><h4>Pass Rate</h4><div class="value">${passPercent}%</div></div>
                 </div>
 
@@ -1446,18 +1538,19 @@
                     <table class="table-res" style="margin-bottom:25px;">
                         <thead>
                             <tr style="background:#f1f5f9;">
-                                <th>A+</th><th>A</th><th>A-</th><th>B</th><th>C</th><th>D</th><th>F/Absent</th>
+                                <th>A+</th><th>A</th><th>A-</th><th>B</th><th>C</th><th>D</th><th>F</th><th>Absent</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><strong>${gradesCount['A+']}</strong></td>
-                                <td><strong>${gradesCount['A']}</strong></td>
-                                <td><strong>${gradesCount['A-']}</strong></td>
-                                <td><strong>${gradesCount['B']}</strong></td>
-                                <td><strong>${gradesCount['C']}</strong></td>
-                                <td><strong>${gradesCount['D']}</strong></td>
-                                <td><strong style="color:var(--danger);">${gradesCount['F']}</strong></td>
+                                <td><strong>${gradesCount['A+'] || 0}</strong></td>
+                                <td><strong>${gradesCount['A'] || 0}</strong></td>
+                                <td><strong>${gradesCount['A-'] || 0}</strong></td>
+                                <td><strong>${gradesCount['B'] || 0}</strong></td>
+                                <td><strong>${gradesCount['C'] || 0}</strong></td>
+                                <td><strong>${gradesCount['D'] || 0}</strong></td>
+                                <td><strong style="color:var(--danger);">${gradesCount['F'] || 0}</strong></td>
+                                <td><strong style="color:var(--warning);">${gradesCount['Absent'] || 0}</strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1468,7 +1561,14 @@
                     <table class="table-res">
                         <thead>
                             <tr style="background:#edf2f7;">
-                                <th>Subject</th><th>Examinee</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Average Marks</th>
+                                <th>Subject</th>
+                                <th>Registered </th>
+                                <th>Present </th>
+                                <th>Passed </th>
+                                <th>Failed </th>
+                                <th>Absent </th>
+                                <th>Pass Rate </th>
+                                <th>Average Marks </th>
                             </tr>
                         </thead>
                         <tbody>${subRows}</tbody>
@@ -1477,7 +1577,7 @@
             `;
         }
 
-        async function exportAnalysisPDF(total, passed, failed, passPercent, gradesCount, subStats, meta) {
+        async function exportAnalysisPDF(total, examinees, passed, failed, absentCount, passPercent, gradesCount, subStats, meta) {
             const logoData = await getLogoBase64();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -1506,9 +1606,11 @@
                 head: [['Summary Metrics', 'Value']],
                 body: [
                     ['Total Registrations', total.toString()],
+                    ['Examinees (Present)', examinees.toString()],
                     ['Success (Passed)', passed.toString()],
                     ['Unsuccessful (Failed)', failed.toString()],
-                    ['Overall Pass Percentage', `${passPercent}%`]
+                    ['Absent', absentCount.toString()],
+                    ['Overall Pass Percentage (Excluding Absentees)', `${passPercent}%`]
                 ],
                 theme: 'grid',
                 headStyles: { fillColor: [52, 73, 94] }
@@ -1519,10 +1621,11 @@
             doc.text("Grade Wise Statistics", 20, doc.lastAutoTable.finalY + 10);
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 14,
-                head: [['A+', 'A', 'A-', 'B', 'C', 'D', 'F']],
+                head: [['A+', 'A', 'A-', 'B', 'C', 'D', 'F', 'Absent']],
                 body: [[
-                    gradesCount['A+'].toString(), gradesCount['A'].toString(), gradesCount['A-'].toString(),
-                    gradesCount['B'].toString(), gradesCount['C'].toString(), gradesCount['D'].toString(), gradesCount['F'].toString()
+                    (gradesCount['A+'] || 0).toString(), (gradesCount['A'] || 0).toString(), (gradesCount['A-'] || 0).toString(),
+                    (gradesCount['B'] || 0).toString(), (gradesCount['C'] || 0).toString(), (gradesCount['D'] || 0).toString(), 
+                    (gradesCount['F'] || 0).toString(), (gradesCount['Absent'] || 0).toString()
                 ]],
                 theme: 'grid',
                 headStyles: { fillColor: [26, 188, 156] }
@@ -1533,14 +1636,15 @@
             doc.text("Detailed Subject Wise Summary", 20, doc.lastAutoTable.finalY + 10);
             
             const subBody = Object.entries(subStats).map(([sub, st]) => {
-                const subPassPercent = ((st.passed / st.total) * 100).toFixed(1);
-                const avgMarks = (st.totalMarks / st.total).toFixed(1);
-                return [sub, st.total, st.passed, st.failed, `${subPassPercent}%`, avgMarks];
+                const subPresent = st.total - st.absent;
+                const subPassPercent = subPresent > 0 ? ((st.passed / subPresent) * 100).toFixed(1) : "0.0";
+                const avgMarks = subPresent > 0 ? (st.totalMarks / subPresent).toFixed(1) : "0.0";
+                return [sub, st.total, subPresent, st.passed, st.failed, st.absent, `${subPassPercent}%`, avgMarks];
             });
 
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 14,
-                head: [['Subject', 'Examinee', 'Passed', 'Failed', 'Pass Rate', 'Average Marks']],
+                head: [['Subject', 'Registered', 'Present', 'Passed', 'Failed', 'Absent', 'Pass Rate', 'Average Marks']],
                 body: subBody,
                 theme: 'grid',
                 headStyles: { fillColor: [52, 73, 94] }
