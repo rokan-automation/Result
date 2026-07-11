@@ -548,7 +548,7 @@
             
             <div class="flex-row">
                 <div class="flex-col"><label>Group</label><select id="group" onchange="saveH(); updateSubs(); preloadTabCache().then(() => rollInputHandler());"><option>Arts</option><option>Science</option><option>Business Studies</option></select></div>
-                <div class="flex-col"><label>Roll Number</label><input type="number" id="roll" onchange="rollInputHandler()" onkeydown="rollKey(event)"></div>
+                <div class="flex-col"><label>Roll Number</label><input type="number" id="roll" oninput="rollInputHandler()" onkeydown="rollKey(event)"></div>
                 <div class="flex-col"><label>Student Name</label><input type="text" id="name" readonly style="background-color: #f1f5f9;"></div>
                 <div class="flex-col"><label>Mobile Number</label><input type="text" id="mobile" placeholder="017XXXXXXXX" readonly style="background-color: #f1f5f9;"></div>
             </div>
@@ -642,6 +642,19 @@
         let cachedProfiles = []; // sorted active registered student profiles (All sessions included to detect duplicates)
         let cachedMarksMap = {}; // key: roll_session -> existing marks data (Composite Key protection)
         let activeStudentMarks = {}; // current student's temporary active marks object
+
+        // Local Storage Helper functions to resolve missing function bugs
+        function saveH() {
+            ['exam_name', 'exam_year', 'main_session', 'session', 'group'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) localStorage.setItem(id, el.value);
+            });
+        }
+
+        function saveDbSession() {
+            const el = document.getElementById('db_session');
+            if (el) localStorage.setItem('db_session', el.value);
+        }
 
         async function getLogoBase64() {
             try {
@@ -825,20 +838,6 @@
             }
         }
 
-        function syncAnalysisInputs() {
-            document.getElementById('an_exam_name').value = document.getElementById('exam_name').value;
-            document.getElementById('an_exam_year').value = document.getElementById('exam_year').value;
-            document.getElementById('an_group').value = document.getElementById('group').value;
-            document.getElementById('an_session').value = document.getElementById('session').value;
-        }
-
-        function syncMeritInputs() {
-            document.getElementById('mt_exam_name').value = document.getElementById('exam_name').value;
-            document.getElementById('mt_exam_year').value = document.getElementById('exam_year').value;
-            document.getElementById('mt_group').value = document.getElementById('group').value;
-            document.getElementById('mt_session').value = document.getElementById('session').value;
-        }
-
         function focusMarkFieldIfSubSelected() {
             const sub = document.getElementById('comp_sub').value || document.getElementById('opt_sub').value || document.getElementById('add_sub').value;
             const roll = document.getElementById('roll').value;
@@ -987,12 +986,6 @@
 
         async function autoFetch() {
             rollInputHandler();
-        }
-
-        function dbEnterKey(e) {
-            if (e.key === 'Enter') {
-                saveProfile();
-            }
         }
 
         async function saveProfile() {
